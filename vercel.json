@@ -2,23 +2,18 @@
   "version": 2,
   "builds": [
     {
-      "src": "article_api.py",
+      "src": "api/index.py",
       "use": "@vercel/python"
     }
   ],
   "routes": [
     {
       "src": "/(.*)",
-      "dest": "article_api.py"
+      "dest": "api/index.py"
     }
   ],
   "env": {
     "FLASK_ENV": "production",
-    "FLASK_APP": "article_api.py"
-  },
-  "functions": {
-    "article_api.py": {
-      "maxDuration": 30
-    }
+    "FLASK_APP": "api/index.py"
   }
 }

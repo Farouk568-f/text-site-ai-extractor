@@ -1,207 +1,179 @@
-# 🚀 Text Site AI Extractor
+# CinePro Backend
 
-[![Python](https://img.shields.io/badge/Python-3.8+-blue.svg)](https://www.python.org/downloads/)
-[![Flask](https://img.shields.io/badge/Flask-2.3+-green.svg)](https://flask.palletsprojects.com/)
-[![License](https://img.shields.io/badge/License-MIT-yellow.svg)](LICENSE)
+## Description
 
-An advanced Arabic text extraction API that intelligently removes duplicates and unwanted content from web articles, providing clean and organized text output.
+This repository contains the logic for the Backend of CinePro. It is an open-source movie and tv show scraper API. If
+you go on specitfic routes, you can get various sources for the movie or tv show you are looking for. It also uses
+MongoDB to store the data it scrapes, so it can be used as a cache and does not have to scrape the same movie or tv show
+repeatedly. You can host this API on your own server or use the one we provide. This is stil in early development, so it
+might not even work when you are reading this.
 
-## ✨ Features
+## Features
 
-### 🔧 Advanced Text Processing
-- **Duplicate Removal**: Smart algorithm using `difflib.SequenceMatcher` to detect and remove similar content
-- **Content Filtering**: Removes UI elements, comments, and navigation components
-- **Text Cleaning**: Eliminates extra spaces, symbols, and unwanted characters
+- NO ADS and NO TRACKING!
+- Supported Media types:
+    - Movie
+    - TV Show
 
-### 📏 Customizable Options
-- **Minimum Text Length**: Configurable threshold (default: 100 characters)
-- **Smart Filtering**: Ignores overly short or long text segments
-- **Advanced Search**: Prioritizes main content areas
+> [!Warning]
+> Since this project is still in development, some features might not work as expected. TV shows are not fully supported
+> yet. It will come after the movie scraping is done.
 
-### 🌐 Multiple Endpoints
-- `/search-articles/` - Search and extract from multiple articles
-- `/extract-single/` - Extract text from a single URL
-- `/health` - API health check
+## Usage
 
-## 🚀 Quick Start
+### Routes
 
-### 1. Install Dependencies
-```bash
-pip install -r requirements.txt
-```
+#### GET /movie/:tmdbId
 
-### 2. Run the API
-```bash
-python article_api.py
-```
+This route returns all the scraping information it can find for the movie with the given tmdbId. If the movie is not in
+the tmdb database, it will return a 405.
 
-The API will run on port 5001
+#### GET /tv/:tmdbId?s=:season&e=:episode
 
-### 3. Test the API
-```bash
-python test_improved_api.py
-```
+This route returns all the scraping information it can find for the tv show with the given tmdbId. If the tv show is not
+in the tmdb database or you did not specify a required field, it will return a 405.
 
-## 📝 Usage Examples
+### Response
 
-### Search Articles with Custom Minimum Length
+Both routes return a JSON object with the following structure:
 
-```python
-import requests
-
-# Search with minimum length 1000 (complete and clean content)
-payload = {
-    "query": "أهمية الذكاء الاصطناعي",
-    "min_length": 1000  # As requested - complete and clean content
-}
-
-response = requests.post("http://localhost:5001/search-articles/", json=payload)
-result = response.json()
-
-print(f"Successful articles: {result['successful_articles']}")
-print(f"Minimum length used: {result['min_length_used']}")
-```
-
-### Extract Text from Single URL
-
-```python
-import requests
-
-# Extract text from URL with minimum length 1000
-payload = {
-    "url": "https://sdaia.gov.sa/ar/SDAIA/about/Pages/AboutAI.aspx",
-    "min_length": 1000
-}
-
-response = requests.post("http://localhost:5001/extract-single/", json=payload)
-result = response.json()
-
-if result["status"] == "success":
-    print(f"Paragraphs: {result['paragraphs_count']}")
-    print(f"Text length: {result['text_length']}")
-    print(f"Text: {result['text'][:200]}...")
-```
-
-## ⚙️ Configuration Options
-
-### Minimum Text Length
-
-| Value | Result |
-|-------|--------|
-| `100` | Short content (default) |
-| `500` | Medium content |
-| `1000` | **Complete and clean content (recommended)** |
-| `2000` | Very long content |
-
-### Optimal Usage Example
-
-```python
-# For complete and clean content as requested
-payload = {
-    "query": "أهمية الذكاء الاصطناعي",
-    "min_length": 1000  # This will give you complete and clean content
+```json
+{
+  "files": [
+    {
+      "file": "url",
+      "type": "file type (hls, mp4, embed)",
+      "lang": "(Specify language using an ISO standard; refer to utils/languages.js for available languages)"
+    }
+  ],
+  "subtitles": [
+    {
+      "url": "the url to the file",
+      "lang": "the language of the subtitle file (use an ISO standard)",
+      "type": "subtitleType (srt, vtt, etc.)"
+    }
+  ]
 }
 ```
 
-## 🔍 How It Works
+#### More Information
 
-### 1. Remove Unwanted Elements
-- `nav`, `header`, `footer`, `aside`
-- `script`, `style`, `noscript`
-- `.navigation`, `.menu`, `.sidebar`
-- `.ads`, `.comments`, `.related`
+> [!Note]
+> It can be that some files require specific headers to be played. Instead of moving that problem to the frontend,
+> CinePro should automatically route the request with a headers param to the proxy endpoint. On the frontend, you can
+> then
+> use the proxy endpoint to play the media. This is not implemented yet!!
 
-### 2. Find Main Content
-```python
-selectors = [
-    'article', 'main', 
-    '[role="main"]', 
-    '.post-content', '.article-content', '.entry-content',
-    '#content', '#main-content', '#article-content'
-]
+##### File Types
+
+- hls: is a .m3u8 file that can be played with a player that supports HLS (like video.js or hls.js)
+- mp4: is a .mp4 file that can be played with a player that supports mp4 (like video.js)
+- embed: is an url that can be embedded in an iframe to play the media. Important: Since you are embedding the media,
+  you do NOT have control of what stuff the iframe is loading. (Ads, tracking, etc. might appear/happen). It can also be
+  that embedding is restricted to certain domains. That is a ~pain in the ass~, but you can't do anything about it.
+
+##### Language
+
+All language values follow the ISO 639-1:2002 standard. You can find more
+information [here](https://en.wikipedia.org/wiki/List_of_ISO_639-1_codes). When using this project as a backend,
+consider checking the `languages.js` file in the `utils` folder. It contains a list of all languages that are supported
+by the project. (Possible return values for the `lang` field in the response).
+
+### Example
+
+#### Request
+
+```http
+GET /movie/718930 HTTP/1.1
 ```
 
-### 3. Text Filtering
-- Remove very short text (< 30 characters)
-- Remove very long text (> 2000 characters)
-- Remove UI elements
-- Remove links and symbols
-
-### 4. Duplicate Removal
-- Uses `difflib.SequenceMatcher`
-- Similarity threshold: 70%
-- Ignores short paragraphs (< 50 characters)
-
-## 📊 Results Comparison
-
-### Before Improvement
-```
-الذكاء الاصطناعيSDAIAالهيئة السعودية للبيانات والذكاء الاصطناعيمعلومات سداياعن سداياالذكاء الاصطناعي
-الذكاء الاصطناعيSDAIAالهيئة السعودية للبيانات والذكاء الاصطناعيمعلومات سداياعن سداياالذكاء الاصطناعي
-هل استفدت من المعلومات المقدمة في هذه الصفحة؟نعملا
-```
-
-### After Improvement
-```
-يُعد الذكاء الاصطناعي (Artificial Intelligence) من أهم التقنيات الحديثة التي تسهم بشكل ملحوظ في التطور التقني السريع وزيادة فرص الابتكار والنمو في مختلف المجالات.
-
-يؤدي الذكاء الاصطناعي دوراً مهماً في رفع الجودة، وزيادة الإمكانات وكفاءة الأعمال وتحسين الإنتاجية.
-```
-
-## 🛠️ Troubleshooting
-
-### Issue: API Not Responding
-```bash
-# Check API health
-curl http://localhost:5001/health
-```
-
-### Issue: Text Too Short
-```python
-# Increase minimum length
-payload = {
-    "query": "أهمية الذكاء الاصطناعي",
-    "min_length": 1000  # Instead of 100
+```json
+{
+  "files": [
+    {
+      "file": "https://example.com/file.mp4",
+      "type": "mp4",
+      "lang": "en"
+    },
+    {
+      "file": "https://example.com/file.m3u8",
+      "type": "hls",
+      "lang": "en"
+    },
+    {
+      "file": "https://example.com/embed",
+      "type": "embed",
+      "lang": "en"
+    }
+  ],
+  "subtitles": [
+    {
+      "url": "https://example.com/subtitle.srt",
+      "lang": "en",
+      "type": "srt"
+    }
+  ]
 }
 ```
 
-### Issue: Duplicate Content
-- System automatically removes duplicates
-- Can adjust similarity threshold in code
+## API Documentation
 
-## 📈 Future Improvements
+The API is documented using the OpenAPI 3.0 specification. The specification file is located at `openapi.yaml` in the project root.
 
-- [ ] Google search integration
-- [ ] Advanced linguistic filtering
-- [ ] Multi-language support
-- [ ] Enhanced duplicate detection algorithm
-- [ ] Web interface
+### Viewing the Documentation
 
-## 🤝 Contributing
+You can use various tools to view and interact with the API documentation:
 
-We welcome contributions! Please:
+1. **Swagger UI**: You can use the Swagger UI to view and test the API endpoints.
+   - Install Swagger UI globally: `npm install -g swagger-ui-cli`
+   - Run: `swagger-ui-cli serve openapi.yaml`
+   - Open your browser at the provided URL
 
-1. Fork the project
-2. Create a new branch
-3. Make your changes
-4. Submit a Pull Request
+2. **Redoc**: Another option for viewing the API documentation.
+   - Install Redoc globally: `npm install -g redoc-cli`
+   - Run: `redoc-cli serve openapi.yaml`
+   - Open your browser at the provided URL
 
-## 📄 License
+3. **Online Editors**: You can also use online editors like [Swagger Editor](https://editor.swagger.io/) or [Stoplight Studio](https://stoplight.io/studio) by uploading the `openapi.yaml` file.
 
-This project is licensed under the MIT License - see the [LICENSE](LICENSE) file for details.
+### Using the Documentation
 
-## 🌟 Star History
+The OpenAPI specification provides detailed information about:
+- Available endpoints
+- Request parameters
+- Response schemas
+- Error responses
 
-[![Star History Chart](https://api.star-history.com/svg?repos=Farouk568-f/text-site-ai-extractor&type=Date)](https://star-history.com/#Farouk568-f/text-site-ai-extractor&Date)
+This can be useful for:
+- Understanding the API structure
+- Generating client libraries
+- Testing the API
+- Creating mock servers
 
----
+## Installation
 
-**💡 Tip**: Use `min_length: 1000` to get complete and clean content as requested!
+### Requirements
 
-## 📞 Support
+- Node.js
 
-If you have any questions or need help, please open an issue on GitHub.
+### Steps
 
----
+1. Clone the repository
+2. Install the dependencies with `npm install`
+3. Check the `.env.example` file and create a `.env` file with the same structure
+4. Start the server with `npm start`
+5. The server should now be running on `http://localhost:3000`
 
-Made with ❤️ for Arabic text processing
+## License
+
+You can use this project for **personal and non-commercial use ONLY**! You are **NOT allowed to sell this project or any
+part of it and/or add ANY KIND of tracking or advertisement to it.**
+
+## Notice
+
+This project is for educational purposes only. We do not host any kind of content. We provide only the links to already
+available content on the internet. We do not host, upload any videos, films, or media files. We are not responsible for
+the accuracy, compliance, copyright, legality, decency, or any other aspect of the content of other linked sites. If you
+have any legal issues, please contact the appropriate media file owners or host sites. And fun fact: If you are law
+enforcement, this project might actually help you take sites down, since you can check where the media is hosted on. (
+pls don't come and get our asses😔😔)
