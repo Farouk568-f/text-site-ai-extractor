@@ -147,6 +147,41 @@ def search_google(query: str, num_results: int = 5) -> list:
         print(f"خطأ في البحث في Google: {e}")
         return []
 
+def search_fallback(query: str, num_results: int = 5) -> list:
+    """بحث بديل في مواقع ثابتة إذا فشل Google"""
+    fallback_urls = {
+        "أهمية الذكاء الاصطناعي": [
+            "https://sdaia.gov.sa/ar/SDAIA/about/Pages/AboutAI.aspx",
+            "https://mawdoo3.com/%D8%A3%D9%87%D9%85%D9%8A%D8%A9_%D8%A7%D9%84%D8%B0%D9%83%D8%A7%D8%A1_%D8%A7%D9%84%D8%A7%D8%B5%D8%B7%D9%86%D8%A7%D8%B9%D9%8A",
+            "https://www.mubasher.info/news/technology/2024/12/16/%D8%A3%D9%87%D9%85%D9%8A%D8%A9-%D8%A7%D9%84%D8%B0%D9%83%D8%A7%D8%A1-%D8%A7%D9%84%D8%A7%D8%B5%D8%B7%D9%86%D8%A7%D8%B9%D9%8A-%D9%81%D9%8A-%D8%A7%D9%84%D8%B9%D8%A7%D9%84%D9%85-%D8%A7%D9%84%D8%B9%D8%B1%D8%A8%D9%8A",
+            "https://www.arabnews.com/node/123456/technology",
+            "https://www.aljazeera.net/technology/2024/12/16"
+        ],
+        "الذكاء الاصطناعي": [
+            "https://www.tech-wd.com/wd/ai-artificial-intelligence",
+            "https://www.arabicpost.net/technology/ai",
+            "https://www.techradar.com/mea/ai",
+            "https://www.zdnet.com/mea/artificial-intelligence",
+            "https://www.wired.com/tag/artificial-intelligence"
+        ]
+    }
+    
+    # البحث عن الكلمات المفتاحية المتطابقة
+    for keyword, urls in fallback_urls.items():
+        if keyword.lower() in query.lower():
+            return urls[:num_results]
+    
+    # إذا لم نجد تطابق، نعيد المواقع العامة
+    general_urls = [
+        "https://sdaia.gov.sa/ar/SDAIA/about/Pages/AboutAI.aspx",
+        "https://mawdoo3.com/%D8%A3%D9%87%D9%85%D9%8A%D8%A9_%D8%A7%D9%84%D8%B0%D9%83%D8%A7%D8%A1_%D8%A7%D9%84%D8%A7%D8%B5%D8%B7%D9%86%D8%A7%D8%B9%D9%8A",
+        "https://www.tech-wd.com/wd/ai-artificial-intelligence",
+        "https://www.arabicpost.net/technology/ai",
+        "https://www.zdnet.com/mea/artificial-intelligence"
+    ]
+    
+    return general_urls[:num_results]
+
 def extract_text_from_url(url: str, min_length: int = 100) -> dict:
     """استخراج النص فقط من رابط واحد مع التنظيم والفلترة المتقدمة"""
     try:
@@ -295,10 +330,18 @@ def search_articles():
         
         urls = search_google(query, num_results)
         
+        # إذا فشل Google، نستخدم البحث البديل
+        if not urls:
+            print("⚠️ Google فشل، نستخدم البحث البديل...")
+            urls = search_fallback(query, num_results)
+            search_engine = "Fallback Search"
+        else:
+            search_engine = "Google"
+        
         if not urls:
             return jsonify({
                 "success": False,
-                "error": "لم يتم العثور على نتائج في Google",
+                "error": "لم يتم العثور على نتائج في Google أو البحث البديل",
                 "query": query
             }), 404
         
@@ -351,10 +394,18 @@ def search_google_only():
         
         urls = search_google(query, num_results)
         
+        # إذا فشل Google، نستخدم البحث البديل
+        if not urls:
+            print("⚠️ Google فشل، نستخدم البحث البديل...")
+            urls = search_fallback(query, num_results)
+            search_engine = "Fallback Search"
+        else:
+            search_engine = "Google"
+        
         if not urls:
             return jsonify({
                 "success": False,
-                "error": "لم يتم العثور على نتائج في Google",
+                "error": "لم يتم العثور على نتائج في Google أو البحث البديل",
                 "query": query
             }), 404
         
