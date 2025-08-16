@@ -1,0 +1,57 @@
+version: '3.8'
+
+services:
+  text-extractor-api:
+    build: .
+    container_name: text-extractor-api
+    ports:
+      - "5001:5001"
+    environment:
+      - FLASK_ENV=production
+      - FLASK_APP=article_api.py
+    volumes:
+      - ./logs:/app/logs
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:5001/health"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 40s
+    networks:
+      - text-extractor-network
+
+  # Optional: Add Redis for caching (future feature)
+  # redis:
+  #   image: redis:7-alpine
+  #   container_name: text-extractor-redis
+  #   ports:
+  #     - "6379:6379"
+  #   volumes:
+  #     - redis_data:/data
+  #   restart: unless-stopped
+  #   networks:
+  #     - text-extractor-network
+
+  # Optional: Add Nginx for reverse proxy (future feature)
+  # nginx:
+  #   image: nginx:alpine
+  #   container_name: text-extractor-nginx
+  #   ports:
+  #     - "80:80"
+  #     - "443:443"
+  #   volumes:
+  #     - ./nginx.conf:/etc/nginx/nginx.conf
+  #     - ./ssl:/etc/nginx/ssl
+  #   depends_on:
+  #     - text-extractor-api
+  #   restart: unless-stopped
+  #   networks:
+  #     - text-extractor-network
+
+networks:
+  text-extractor-network:
+    driver: bridge
+
+volumes:
+  # redis_data:  # Uncomment when adding Redis
