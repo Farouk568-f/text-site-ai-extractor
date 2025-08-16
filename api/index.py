@@ -10,6 +10,7 @@ from bs4 import BeautifulSoup
 import re
 import difflib
 from googlesearch import search
+from newspaper import Article
 
 app = Flask(__name__)
 CORS(app)
@@ -147,6 +148,17 @@ def search_google(query: str, num_results: int = 5) -> list:
         print(f"خطأ في البحث في Google: {e}")
         return []
 
+def extract_article_title(url: str) -> str:
+    """استخراج عنوان المقال باستخدام newspaper3k"""
+    try:
+        article = Article(url)
+        article.download()
+        article.parse()
+        return article.title if article.title else "عنوان غير محدد"
+    except Exception as e:
+        print(f"خطأ في استخراج العنوان: {e}")
+        return "عنوان غير محدد"
+
 def search_fallback(query: str, num_results: int = 5) -> list:
     """بحث بديل في مواقع ثابتة إذا فشل Google"""
     fallback_urls = {
@@ -276,9 +288,13 @@ def extract_text_from_url(url: str, min_length: int = 100) -> dict:
             clean_text = clean_and_organize_text(raw_text)
             
             if clean_text and len(clean_text) > min_length:
+                # استخراج العنوان
+                title = extract_article_title(url)
+                
                 return {
                     "status": "success",
                     "url": url,
+                    "title": title,
                     "paragraphs_count": len(article_texts),
                     "text": clean_text,
                     "text_length": len(clean_text)
@@ -288,9 +304,13 @@ def extract_text_from_url(url: str, min_length: int = 100) -> dict:
         if all_text:
             clean_text = clean_and_organize_text(all_text)
             if len(clean_text) > min_length:
+                # استخراج العنوان
+                title = extract_article_title(url)
+                
                 return {
                     "status": "success",
                     "url": url,
+                    "title": title,
                     "paragraphs_count": 1,
                     "text": clean_text,
                     "text_length": len(clean_text),
