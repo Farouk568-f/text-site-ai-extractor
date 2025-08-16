@@ -9,6 +9,7 @@ import requests
 from bs4 import BeautifulSoup
 import re
 import difflib
+from googlesearch import search
 
 app = Flask(__name__)
 CORS(app)
@@ -134,6 +135,17 @@ def clean_and_organize_text(text: str) -> str:
     text = remove_duplicate_content(text)
     
     return text.strip()
+
+def search_google(query: str, num_results: int = 5) -> list:
+    """البحث في Google عن المواقع"""
+    try:
+        urls = []
+        for url in search(query, num_results=num_results, lang="ar", country="sa"):
+            urls.append(url)
+        return urls
+    except Exception as e:
+        print(f"خطأ في البحث في Google: {e}")
+        return []
 
 def extract_text_from_url(url: str, min_length: int = 100) -> dict:
     """استخراج النص فقط من رابط واحد مع التنظيم والفلترة المتقدمة"""
@@ -272,20 +284,32 @@ def search_articles():
         data = request.get_json()
         query = data.get('query', '')
         min_length = data.get('min_length', 100)
+        num_results = data.get('num_results', 5)  # عدد النتائج المطلوبة
         
         if not query:
             return jsonify({"error": "يجب توفير query"}), 400
         
-        sample_urls = [
-            "https://sdaia.gov.sa/ar/SDAIA/about/Pages/AboutAI.aspx",
-            "https://mawdoo3.com/%D8%A3%D9%87%D9%85%D9%8A%D8%A9_%D8%A7%D9%84%D8%B0%D9%83%D8%A7%D8%A1_%D8%A7%D9%84%D8%A7%D8%B5%D8%B7%D9%86%D8%A7%D8%B9%D9%8A"
-        ]
+        # البحث في Google عن المواقع
+        print(f"🔍 البحث في Google عن: {query}")
+        print(f"📊 عدد النتائج المطلوبة: {num_results}")
+        
+        urls = search_google(query, num_results)
+        
+        if not urls:
+            return jsonify({
+                "success": False,
+                "error": "لم يتم العثور على نتائج في Google",
+                "query": query
+            }), 404
+        
+        print(f"✅ تم العثور على {len(urls)} موقع")
         
         results = []
         successful_articles = 0
         failed_articles = 0
         
-        for url in sample_urls:
+        for url in urls:
+            print(f"📝 معالجة: {url}")
             result = extract_text_from_url(url, min_length)
             if result["status"] == "success":
                 successful_articles += 1
@@ -297,11 +321,50 @@ def search_articles():
         response_data = {
             "success": True,
             "query": query,
-            "total_urls": len(sample_urls),
+            "total_urls": len(urls),
             "successful_articles": successful_articles,
             "failed_articles": failed_articles,
             "results": results,
-            "min_length_used": min_length
+            "min_length_used": min_length,
+            "num_results_requested": num_results,
+            "search_engine": "Google"
+        }
+        
+        return jsonify(response_data)
+        
+    except Exception as e:
+        return jsonify({"error": f"خطأ في معالجة الطلب: {str(e)}"}), 500
+
+@app.route('/search-google/', methods=['POST'])
+def search_google_only():
+    """نقطة نهاية للبحث في Google فقط (بدون استخراج النص)"""
+    try:
+        data = request.get_json()
+        query = data.get('query', '')
+        num_results = data.get('num_results', 5)
+        
+        if not query:
+            return jsonify({"error": "يجب توفير query"}), 400
+        
+        print(f"🔍 البحث في Google عن: {query}")
+        print(f"📊 عدد النتائج المطلوبة: {num_results}")
+        
+        urls = search_google(query, num_results)
+        
+        if not urls:
+            return jsonify({
+                "success": False,
+                "error": "لم يتم العثور على نتائج في Google",
+                "query": query
+            }), 404
+        
+        response_data = {
+            "success": True,
+            "query": query,
+            "total_results": len(urls),
+            "num_results_requested": num_results,
+            "search_engine": "Google",
+            "urls": urls
         }
         
         return jsonify(response_data)
@@ -336,7 +399,15 @@ def health_check():
             "Improved text extraction",
             "Duplicate content removal",
             "Content quality filtering",
-            "Customizable minimum text length"
+            "Customizable minimum text length",
+            "Google search integration",
+            "Configurable number of results"
+        ],
+        "endpoints": [
+            "POST /search-articles/ - البحث في Google واستخراج النص",
+            "POST /search-google/ - البحث في Google فقط",
+            "POST /extract-single/ - استخراج نص من رابط واحد",
+            "GET /health - فحص صحة API"
         ]
     })
 
